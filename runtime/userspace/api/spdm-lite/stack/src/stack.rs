@@ -210,6 +210,25 @@ impl<S> ConnectionState<S> {
         self.cap_flags.contains(CapFlags::CHUNK) && self.peer_cap_flags.contains(CapFlags::CHUNK)
     }
 
+    pub(crate) fn effective_data_transfer_size<Pal: SpdmPal>(&self, pal: &Pal) -> usize {
+        let peer = if self.peer_data_transfer_size == 0 {
+            pal.mtu()
+        } else {
+            self.peer_data_transfer_size as usize
+        };
+        pal.mtu().min(peer)
+    }
+
+    pub(crate) fn effective_max_spdm_msg_size<Pal: SpdmPal>(&self, pal: &Pal) -> usize {
+        let local = pal.capacity().max(pal.mtu());
+        let peer = if self.peer_max_spdm_msg_size == 0 {
+            local
+        } else {
+            self.peer_max_spdm_msg_size as usize
+        };
+        local.min(peer)
+    }
+
     /// Convert the negotiated `base_asym_sel` bitfield to
     /// [`SpdmPalAsymAlgo`] for cert-store calls.
     pub(crate) fn asym_algo(&self) -> SpdmPalAsymAlgo {
